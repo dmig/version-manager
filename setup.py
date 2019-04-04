@@ -19,11 +19,13 @@ except IOError:
 
 setup(
     name='version-manager',
-    version='0.6.0',
+    version='0.8.6',
     description="Version upgrader in all spesific files like setup.py, package.json, bower.json etc.",
     author="Ahmet DAL",
     author_email="ceahmetdal@gmail.com",
-    url="https://github.com/javrasya/version-manager",
+    maintainer='Dmitriy Geels',
+    maintainer_email='dmitriy.geels@gmail.com',
+    url="https://github.com/dmig/version-manager",
     platforms=['any'],
     license='BSD',
     packages=find_packages(),
@@ -35,5 +37,15 @@ setup(
     ],
     include_package_data=True,
     entry_points=entrypoints,
-    long_description=long_description
+    long_description=long_description,
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2.7',
+        'Topic :: Software Development',
+        'Topic :: Utilities'
+    ]
 )
