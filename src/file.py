@@ -1,10 +1,14 @@
+import itertools
 import os
 import re
-from repoze.lru import CacheMaker
+from fnmatch import fnmatch
+
 import semver
+from colorama import Fore
+from repoze.lru import CacheMaker
+
 from src.config import load_config
 from src.parser.parser import PARSER_REGISTRY
-from colorama import Fore, Back, Style
 
 cache_maker = CacheMaker()
 
@@ -16,11 +20,14 @@ version_pattern = re.compile(r'((\d)+.?)+')
 class File:
     supported_bumps = ['major', 'minor', 'patch']
 
-    def __init__(self, name, path, parser, color=Fore.WHITE):
+    def __init__(self, group, name, path, parser, version_separator=".", color=Fore.WHITE):
+        self.group = group
         self.name = name
         self.path = path
         self.parser = parser
         self.color = color
+        self.previous_version = None
+        self.version_separator = version_separator
         if not self.parser:
             raise Exception("Parser must be given.")
 
@@ -39,29 +46,40 @@ class File:
         return current_version
 
     def update_version(self, new_version):
-        print('%sFile %s WAS on version %s' % (self.color, self.path, self.current_version))
-        new_content = self.parser.update_version(self.content, new_version)
+        self.previous_version = self.current_version
+        # print('%sFile %s WAS on version %s' % (self.color, self.path, self.current_version))
+        new_content = self.parser.update_version(self.content, new_version.replace(".", self.version_separator))
         with open(self.path, 'w') as f:
             f.write(new_content)
         cache_maker.clear("current_version")
         cache_maker.clear("content")
-        print('%sFile %s IS NOW on version %s\n' % (self.color, self.path, self.current_version))
+        # print('%sFile %s IS NOW on version %s\n' % (self.color, self.path, self.current_version))
 
     def bump_version(self, bump):
         if bump not in self.supported_bumps:
             raise Exception('%s is not one among %s' % (bump, self.supported_bumps))
-        new_version = getattr(semver, 'bump_%s' % bump)(self.current_version)
+        new_version = getattr(semver, 'bump_%s' % bump)(self.current_version.replace(self.version_separator, "."))
         self.update_version(new_version)
 
 
-loaded_files = []
+# loaded_files = []
 
 
 class FileLoader:
-    def __init__(self):
-        self.config = load_config()
-        self.files = self.config.get("files", [])
-        self.excludes = self.config.get("excludes", [])
+    def __init__(self, groups):
+        self._loaded_files = []
+        self.config = load_config(groups)
+
+    def _attrs(self, key):
+        return {k: v.get(key, []) for k, v in self.config.items()}
+
+    @property
+    def file_config_groups(self):
+        return self._attrs("files")
+
+    @property
+    def excludes(self):
+        return itertools.chain(*self._attrs("excludes").values())
 
     def load(self):
         for dirpath, dirnames, files in os.walk('./'):
@@ -77,17 +95,24 @@ class FileLoader:
                     pass
 
             for f in files:
-                config_files = filter(lambda x: x.get('name') == f, self.files)
-                for config_file in config_files:
-                    parser_type = config_file.get('parser', 'regexp')
-                    color = config_file.get('color', Fore.WHITE)
-                    ParserClass = PARSER_REGISTRY.get(parser_type)
-                    if ParserClass:
-                        parser = ParserClass(*config_file.get('args', []), **config_file.get('kwargs', {}))
-                        loaded_files.append(File(config_file.get('name'), os.path.abspath(os.path.join(dirpath, f)), parser, color=color))
-                    else:
-                        raise Exception("No registered with parser type %s. Available parsers are %s" % (parser_type, ','.join(PARSER_REGISTRY.keys())))
+                for group, file_configs in self.file_config_groups.items():
+                    config_files = filter(lambda fc: any(fnmatch(f, fcn) for fcn in fc.get('names', [])), file_configs)
+                    for config_file in config_files:
+                        parser_type = config_file.get('parser', 'regexp')
+                        version_separator = config_file.get('version_separator', '.')
+                        color = eval("Fore." + config_file.get('color', "white").upper())
+                        ParserClass = PARSER_REGISTRY.get(parser_type)
+                        if ParserClass:
+                            parser = ParserClass(*config_file.get('args', []), **config_file.get('kwargs', {}))
+                            self._loaded_files.append(
+                                File(group, f, os.path.abspath(os.path.join(dirpath, f)), parser, version_separator=version_separator, color=color)
+                            )
+                        else:
+                            raise Exception("No registered with parser type %s. Available parsers are %s" % (parser_type, ','.join(PARSER_REGISTRY.keys())))
 
+    @property
+    def loaded_files(self):
+        return sorted(self._loaded_files, key=lambda f: (f.group, f.color, f.path, f.name))
 
-FileLoader().load()
-loaded_files = sorted(loaded_files, key=lambda f: f.name)
+# FileLoader().load()
+# loaded_files = sorted(loaded_files, key=lambda f: f.name)
