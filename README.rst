@@ -21,7 +21,7 @@ Version Manager
 
 |Built Status| |Coverage Status|
 
-This is a utility to manage versions in all necessary files in one place.(see,update, etc.) 
+This is a utility to manage versions in all necessary files in one place.(see,update, etc.)
 
 Sometimes there are too many files in the project which contains project version. For example you would be having files such as bower.json and setup.py on same version in your project. Whenever the version is wanted be to upgraded, all files were updated one by one; now all implemented files can be update simply at once. It will find your versioning files and update them one by one.
 
@@ -108,7 +108,7 @@ Print Color
 Implement for Your Custom Files
 ===============================
 
-Any file implementation can be added simply. ``version-manager`` reads extra config from ``.vmrc`` file under your current directory(project folder maybe) or your user home directory. 
+Any file implementation can be added simply. ``version-manager`` reads extra config from ``.vmrc`` file under your current directory(project folder maybe) or your user home directory.
 
 Here is a simple example of ``.vmrc``
 
@@ -126,23 +126,26 @@ or
 .. code-block:: json
 
     {
-      files : [
-                  {
-                        'name': 'my_custom_file.txt',
-                        'parser': 'regexp',
-                        'kwargs':{
-                              'regex': '(?P<match_left>version=")(?P<version>\d+)(?P<match_right>")'
+        "groups": {
+            "my-files": {
+                "files": [
+                    {
+                        "names": ["my_custom_file.txt"],
+                        "parser": "regexp",
+                        "kwargs": {
+                            "regex": "(?P<match_left>version=")(?P<version>\\d+)(?P<match_right>")"
                         }
-                  },
-                  {
-                        'name': 'my_custom_file.xml',
-                        'parser': 'xml',
-                        'kwargs':{
-                              'xpaths': ['./ns:path1/ns:version'],
-                              'namespaces':{'my_namespace':'my-name-space-uri'}
+                    },
+                    {
+                        "names": ["my_custom_file.xml"],
+                        "parser": "xml",
+                        "kwargs":{
+                              "xpaths": ["./ns:path1/ns:version"],
+                              "namespaces":{"my_namespace":"my-name-space-uri'}
                         }
-                  }           
-            ]
+                    }
+                ]
+            }
     }
 
 
@@ -153,13 +156,21 @@ Any famous file formats can be demanded as built-in by opening an issue. Feel fr
 Change Logs
 ===========
 
+0.8.6
+-------------
+* Fix 0.8.5 config loading bugs
+* Update README
+
+...
+
+
 0.6.0(Stable)
 -------------
 
 * **Improvement** - ``current_version`` and ``update_version`` are merged as subcomment under ``versionmanager`` consolescript. ``versionmanager --status``, ``versionmanager --set <version>`` and ``versionmanager --bump <level>`` are available instead of ``current_version`` and ``update_version <version>`` .
 * **Improvement** - SemVer support is added for bump versioning. ``versionmanager --bump <level>`` which level is one among (``major``,``minor``,``patch``)
 
-  
+
 0.5.1
 -----
 
